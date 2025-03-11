@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .message-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .message-content ul, .message-content ol {
+            padding-left: 1.2em;
+            margin: 0.3em 0;
+        }
+        .message-content li {
+            margin: 0.2em 0;
+        }
+        .message-content p {
+            margin: 0.3em 0;
+        }
+        .message-content code {
+            background-color: #f0f0f0;
+            padding: 0.1em 0.3em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .message-content pre {
+            background-color: #f5f5f5;
+            padding: 0.8em;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 0.3em 0;
+        }
+        .chat-bubble {
+            max-width: 85%;
+            padding: 0.6em 1em;
+            margin: 0.3em 0;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div class="container mx-auto px-2 py-4 max-w-4xl">
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">AI Chat Assistant</h1>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="bg-white rounded-lg shadow-lg p-4">
+        <!-- Messages Area -->
+        <div id="chat-messages" class="space-y-2 mb-4 h-[500px] overflow-y-auto">
+            <!-- Messages will be inserted here -->
+        </div>
+
+        <!-- Input Area -->
+        <div class="flex gap-2">
+            <textarea id="user-input"
+                   class="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-sm"
+                   placeholder="Type your message here..."
+                   rows="2"></textarea>
+            <button id="send-button"
+                    class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors h-fit text-sm">
+                Send
+            </button>
+        </div>
+
+        <!-- Model Selection -->
+        <div class="mt-3">
+            <select id="model-select" class="w-full p-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="deepseek-r1:1.5b">DeepSeek R1 1.5B</option>
+                <option value="llama2">Llama 2</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const modelSelect = document.getElementById('model-select');
+
+        let currentEventSource = null;
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function processMessage(content) {
+            content = content.replace(/<think>.*?<\/think>/gs, '');
+            return marked.parse(content);
+        }
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `chat-bubble ${
+                isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
+            }`;
+
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content text-sm';
+            
+            if (isUser) {
+                messageContent.textContent = content;
+            } else {
+                messageContent.innerHTML = processMessage(content);
+            }
+
+            messageBubble.appendChild(messageContent);
+            messageDiv.appendChild(messageBubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, true);
+            userInput.value = '';
+
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'flex justify-start';
+            const responseBubble = document.createElement('div');
+            responseBubble.className = 'chat-bubble bg-gray-100 text-gray-800';
+            const responseContent = document.createElement('div');
+            responseContent.className = 'message-content text-sm';
+            responseBubble.appendChild(responseContent);
+            responseDiv.appendChild(responseBubble);
+            chatMessages.appendChild(responseDiv);
+
+            if (currentEventSource) {
+                currentEventSource.close();
+            }
+
+            const model = modelSelect.value;
+            const apiUrl = `http://localhost:8090/api/v1/ollama/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
+            currentEventSource = new EventSource(apiUrl);
+
+            let responseText = '';
+
+            currentEventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    const content = data.result.output.content;
+
+                    if (content) {
+                        responseText += content;
+                        responseContent.innerHTML = processMessage(responseText);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+
+                    if (data.result.metadata.finishReason === "unknown") {
+                        currentEventSource.close();
+                    }
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            };
+
+            currentEventSource.onerror = function(error) {
+                console.error('EventSource error:', error);
+                currentEventSource.close();
+            };
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    });
+</script>
+</body>
+</html>

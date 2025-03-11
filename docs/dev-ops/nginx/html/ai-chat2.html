@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .message-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .message-content pre {
+            background-color: #f5f5f5;
+            padding: 0.8em;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 0.3em 0;
+        }
+        .chat-bubble {
+            max-width: 85%;
+            padding: 0.6em 1em;
+            margin: 0.3em 0;
+            border-radius: 0.5rem;
+        }
+        .upload-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .upload-modal-content {
+            position: relative;
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            width: 50%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-4 flex justify-between items-center">
+                <button id="new-chat-btn" 
+                        class="flex-1 bg-blue-500 text-white rounded-lg px-4 py-2 text-sm hover:bg-blue-600 transition-colors mr-2">
+                    New Chat
+                </button>
+<!--                <button id="upload-btn"-->
+<!--                        class="bg-green-500 text-white rounded-lg px-3 py-2 text-sm hover:bg-green-600 transition-colors">-->
+<!--                    Upload-->
+<!--                </button>-->
+            </div>
+            
+            <div id="chat-list" class="flex-1 overflow-y-auto p-2 space-y-2">
+                <!-- Chat items will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Header -->
+            <div id="chat-header" class="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <h2 id="current-chat-title" class="text-lg font-semibold">New Chat</h2>
+                <div class="flex items-center space-x-4">
+                    <!-- 添加RAG标签选择器 -->
+                    <select id="rag-tag-select" 
+                            class="p-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">All Knowledge Base</option>
+                    </select>
+                </div>
+                <div id="chat-actions" class="space-x-2 hidden">
+                    <button class="rename-chat-btn text-sm text-gray-600 hover:text-gray-900">Rename</button>
+                    <button class="delete-chat-btn text-sm text-red-600 hover:text-red-900">Delete</button>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Messages will be inserted here -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <div class="flex gap-2 items-start">
+                    <div class="flex-1">
+                        <textarea id="user-input"
+                               class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none text-sm"
+                               placeholder="Type your message here..."
+                               rows="2"></textarea>
+                        <div class="flex gap-2 mt-2">
+                            <select id="model-select" 
+                                    class="flex-1 p-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                <option value="deepseek-r1:1.5b">DeepSeek R1 1.5B</option>
+                                <option value="llama2">Llama 2</option>
+                            </select>
+                            <button id="upload-btn"
+                                    class="px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors">
+                                Upload
+                            </button>
+                        </div>
+                    </div>
+                    <button id="send-button"
+                            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改上传对话框，添加Tab切换 -->
+    <div id="upload-modal" class="upload-modal">
+        <div class="upload-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Upload Knowledge Base</h3>
+                <button id="close-upload" class="text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            
+            <!-- Tab切换按钮 -->
+            <div class="flex mb-4 border-b">
+                <button class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 upload-tab active" data-tab="files">
+                    Files Upload
+                </button>
+                <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 upload-tab" data-tab="git">
+                    Git Repository
+                </button>
+            </div>
+
+            <!-- 文件上传表单 -->
+            <div id="files-upload" class="upload-content active">
+                <div class="mb-4">
+                    <input type="text" id="rag-tag" placeholder="Enter RAG tag" 
+                           class="w-full p-2 border rounded-lg mb-2">
+                    <input type="file" id="file-input" multiple
+                           class="w-full p-2 border rounded-lg" accept=".txt,.pdf,.doc,.docx">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button id="cancel-upload" class="px-4 py-2 text-gray-600 hover:text-gray-900">Cancel</button>
+                    <button id="confirm-upload" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Upload</button>
+                </div>
+            </div>
+
+            <!-- Git仓库上传表单 -->
+            <div id="git-upload" class="upload-content hidden">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Repository URL</label>
+                        <input type="text" id="repo-url" placeholder="https://github.com/username/repo.git" 
+                               class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="git-username" placeholder="Git username" 
+                               class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Token</label>
+                        <input type="password" id="git-token" placeholder="Git token" 
+                               class="w-full p-2 border rounded-lg">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 mt-4">
+                    <button id="cancel-git" class="px-4 py-2 text-gray-600 hover:text-gray-900">Cancel</button>
+                    <button id="confirm-git" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Clone & Upload</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatList = document.getElementById('chat-list');
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+            const modelSelect = document.getElementById('model-select');
+            const newChatBtn = document.getElementById('new-chat-btn');
+            const chatHeader = document.getElementById('chat-header');
+            const currentChatTitle = document.getElementById('current-chat-title');
+            const chatActions = document.getElementById('chat-actions');
+            const ragTagSelect = document.getElementById('rag-tag-select');
+
+            let currentEventSource = null;
+            let currentChatId = null;
+            let chats = JSON.parse(localStorage.getItem('chats') || '[]');
+
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+
+            // Load chats from localStorage
+            function loadChats() {
+                chatList.innerHTML = '';
+                chats.forEach(chat => {
+                    addChatToList(chat);
+                });
+            }
+
+            // Save chats to localStorage
+            function saveChats() {
+                localStorage.setItem('chats', JSON.stringify(chats));
+            }
+
+            // Add chat to sidebar list
+            function addChatToList(chat) {
+                const chatItem = document.createElement('div');
+                chatItem.className = `p-2 rounded-lg hover:bg-gray-100 ${
+                    chat.id === currentChatId ? 'bg-blue-50' : ''
+                }`;
+                
+                const chatContent = document.createElement('div');
+                chatContent.className = 'flex justify-between items-center';
+                
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'flex-1 cursor-pointer truncate';
+                titleDiv.textContent = chat.title;
+                titleDiv.addEventListener('click', () => selectChat(chat));
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity';
+                
+                const renameBtn = document.createElement('button');
+                renameBtn.className = 'text-xs text-gray-600 hover:text-gray-900';
+                renameBtn.textContent = '✏️';
+                renameBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    renameChat(chat);
+                });
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'text-xs text-red-600 hover:text-red-900';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteChat(chat);
+                });
+                
+                actionsDiv.appendChild(renameBtn);
+                actionsDiv.appendChild(deleteBtn);
+                chatContent.appendChild(titleDiv);
+                chatContent.appendChild(actionsDiv);
+                chatItem.appendChild(chatContent);
+                chatList.appendChild(chatItem);
+            }
+
+            // Create new chat
+            function createNewChat() {
+                const chat = {
+                    id: Date.now().toString(),
+                    title: 'New Chat',
+                    messages: []
+                };
+                chats.unshift(chat);
+                saveChats();
+                loadChats();
+                selectChat(chat);
+                return chat;
+            }
+
+            // Select chat
+            function selectChat(chat) {
+                currentChatId = chat.id;
+                currentChatTitle.textContent = chat.title;
+                chatActions.classList.remove('hidden');
+                chatMessages.innerHTML = '';
+                loadChatMessages(chat);
+                loadChats(); // Refresh list to update selection
+            }
+
+            // Load chat messages
+            function loadChatMessages(chat) {
+                chat.messages.forEach(msg => {
+                    addMessage(msg.content, msg.isUser);
+                });
+            }
+
+            // Process and display message
+            function addMessage(content, isUser = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+
+                const messageBubble = document.createElement('div');
+                messageBubble.className = `chat-bubble ${
+                    isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'
+                }`;
+
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content text-sm';
+                
+                if (isUser) {
+                    messageContent.textContent = content;
+                } else {
+                    messageContent.innerHTML = marked.parse(content);
+                }
+
+                messageBubble.appendChild(messageContent);
+                messageDiv.appendChild(messageBubble);
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // Save message to current chat
+                if (currentChatId) {
+                    const chat = chats.find(c => c.id === currentChatId);
+                    if (chat) {
+                        chat.messages.push({ content, isUser });
+                        saveChats();
+                    }
+                }
+            }
+
+            // Send message
+            function sendMessage() {
+                const message = userInput.value.trim();
+                if (!message) return;
+
+                // 如果是新对话的第一条消息，将其设置为标题
+                const currentChat = chats.find(c => c.id === currentChatId);
+                if (currentChat && currentChat.messages.length === 0) {
+                    const title = message.length > 30 ? message.substring(0, 30) + '...' : message;
+                    currentChat.title = title;
+                    currentChatTitle.textContent = title;
+                    saveChats();
+                    loadChats();
+                }
+
+                addMessage(message, true);
+                userInput.value = '';
+
+                const responseDiv = document.createElement('div');
+                responseDiv.className = 'flex justify-start';
+                const responseBubble = document.createElement('div');
+                responseBubble.className = 'chat-bubble bg-gray-100 text-gray-800';
+                const responseContent = document.createElement('div');
+                responseContent.className = 'message-content text-sm';
+                responseBubble.appendChild(responseContent);
+                responseDiv.appendChild(responseBubble);
+                chatMessages.appendChild(responseDiv);
+
+                if (currentEventSource) {
+                    currentEventSource.close();
+                }
+
+                const model = modelSelect.value;
+                const selectedRagTag = ragTagSelect.value;
+                let apiUrl = `http://localhost:8090/api/v1/ollama/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
+                
+                // 如果选择了RAG标签，添加到请求URL
+                if (selectedRagTag) {
+                    apiUrl += `&ragTag=${encodeURIComponent(selectedRagTag)}`;
+                }
+
+                currentEventSource = new EventSource(apiUrl);
+
+                let responseText = '';
+
+                currentEventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        const content = data.result.output.content;
+
+                        if (content) {
+                            responseText += content;
+                            responseContent.innerHTML = marked.parse(responseText);
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+
+                        if (data.result.metadata.finishReason === "STOP") {
+                            currentEventSource.close();
+                            // Save AI response
+                            if (currentChatId) {
+                                const chat = chats.find(c => c.id === currentChatId);
+                                if (chat) {
+                                    chat.messages.push({ content: responseText, isUser: false });
+                                    saveChats();
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
+                    }
+                };
+
+                currentEventSource.onerror = function(error) {
+                    console.error('EventSource error:', error);
+                    currentEventSource.close();
+                };
+            }
+
+            // Rename chat
+            document.querySelector('.rename-chat-btn').addEventListener('click', () => {
+                const chat = chats.find(c => c.id === currentChatId);
+                if (chat) {
+                    const newTitle = prompt('Enter new chat name:', chat.title);
+                    if (newTitle) {
+                        chat.title = newTitle;
+                        currentChatTitle.textContent = newTitle;
+                        saveChats();
+                        loadChats();
+                    }
+                }
+            });
+
+            // Delete chat
+            document.querySelector('.delete-chat-btn').addEventListener('click', () => {
+                if (confirm('Are you sure you want to delete this chat?')) {
+                    chats = chats.filter(c => c.id !== currentChatId);
+                    saveChats();
+                    loadChats();
+                    chatMessages.innerHTML = '';
+                    currentChatTitle.textContent = 'New Chat';
+                    chatActions.classList.add('hidden');
+                    currentChatId = null;
+                }
+            });
+
+            // Event listeners
+            newChatBtn.addEventListener('click', createNewChat);
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Initial load
+            loadChats();
+
+            // 修改loadRagTags函数
+            async function loadRagTags() {
+                try {
+                    const response = await fetch('http://localhost:8090/api/v1/ollama/rag/tags');
+                    const result = await response.json();
+                    if (result.code === '0000' && result.data) {
+                        const tags = result.data;
+                        ragTagSelect.innerHTML = tags.length === 0 ? 
+                            '<option value="">All Knowledge Base</option>' : 
+                            tags.map(tag => `<option value="${tag}">${tag}</option>`).join('');
+                    }
+                } catch (error) {
+                    console.error('Error loading RAG tags:', error);
+                }
+            }
+
+            // 添加上传相关的函数
+            function setupUploadFeatures() {
+                const uploadBtn = document.getElementById('upload-btn');
+                const uploadModal = document.getElementById('upload-modal');
+                const closeUpload = document.getElementById('close-upload');
+                const cancelUpload = document.getElementById('cancel-upload');
+                const confirmUpload = document.getElementById('confirm-upload');
+                const cancelGit = document.getElementById('cancel-git');
+                const confirmGit = document.getElementById('confirm-git');
+                const fileInput = document.getElementById('file-input');
+                const ragTagInput = document.getElementById('rag-tag');
+                const uploadTabs = document.querySelectorAll('.upload-tab');
+                const uploadContents = document.querySelectorAll('.upload-content');
+
+                // Tab切换逻辑
+                uploadTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const tabId = tab.dataset.tab;
+                        uploadTabs.forEach(t => t.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600'));
+                        uploadContents.forEach(c => c.classList.add('hidden'));
+                        tab.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+                        document.getElementById(`${tabId}-upload`).classList.remove('hidden');
+                    });
+                });
+
+                // 打开模态框
+                uploadBtn.addEventListener('click', () => {
+                    uploadModal.style.display = 'block';
+                });
+
+                // 关闭模态框
+                [closeUpload, cancelUpload, cancelGit].forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        uploadModal.style.display = 'none';
+                        fileInput.value = '';
+                        ragTagInput.value = '';
+                        document.getElementById('repo-url').value = '';
+                        document.getElementById('git-username').value = '';
+                        document.getElementById('git-token').value = '';
+                    });
+                });
+
+                // 文件上传
+                confirmUpload.addEventListener('click', async () => {
+                    const files = fileInput.files;
+                    const ragTag = ragTagInput.value.trim();
+
+                    if (!files.length || !ragTag) {
+                        alert('Please select files and enter RAG tag');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('ragTag', ragTag);
+                    for (let file of files) {
+                        formData.append('file', file);
+                    }
+
+                    try {
+                        const response = await fetch('http://localhost:8090/api/v1/ollama/file/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        if (result.code === '0000') {
+                            alert('Upload successful');
+                            uploadModal.style.display = 'none';
+                            fileInput.value = '';
+                            ragTagInput.value = '';
+                            await loadRagTags();
+                        } else {
+                            alert('Upload failed: ' + result.info);
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert('Upload failed');
+                    }
+                });
+
+                // Git仓库上传
+                confirmGit.addEventListener('click', async () => {
+                    const repoUrl = document.getElementById('repo-url').value.trim();
+                    const userName = document.getElementById('git-username').value.trim();
+                    const token = document.getElementById('git-token').value.trim();
+
+                    if (!repoUrl || !userName || !token) {
+                        alert('Please fill in all Git repository fields');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('http://localhost:8090/api/v1/ollama/analyze_git_repository', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `repoUrl=${encodeURIComponent(repoUrl)}&userName=${encodeURIComponent(userName)}&token=${encodeURIComponent(token)}`
+                        });
+
+                        const result = await response.json();
+                        if (result.code === '0000') {
+                            alert('Git repository analysis successful');
+                            uploadModal.style.display = 'none';
+                            document.getElementById('repo-url').value = '';
+                            document.getElementById('git-username').value = '';
+                            document.getElementById('git-token').value = '';
+                            await loadRagTags();
+                        } else {
+                            alert('Git repository analysis failed: ' + result.info);
+                        }
+                    } catch (error) {
+                        console.error('Git analysis error:', error);
+                        alert('Git repository analysis failed');
+                    }
+                });
+            }
+
+            // 在 DOMContentLoaded 中初始化上传功能
+            setupUploadFeatures();
+
+            // 初始化时加载RAG标签
+            loadRagTags();
+        });
+    </script>
+</body>
+</html>
