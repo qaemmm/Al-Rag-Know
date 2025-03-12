@@ -29,13 +29,13 @@ public class ChatTest {
         System.out.println(chatResponseFlux2.toString());
     }
 
-    @Resource
-    private Ollama ollama;
+//    @Resource
+//    private Ollama ollama;
 
-    @Test
-    public void test2(){
-        System.out.println(ollama.generateStreamRag("deepseek-r1:1.5b", "日常总结", "总结"));
-
-    }
+//    @Test
+//    public void test2(){
+//        System.out.println(ollama.generateStreamRag("deepseek-r1:1.5b", "日常总结", "总结"));
+//
+//    }
 
 }
