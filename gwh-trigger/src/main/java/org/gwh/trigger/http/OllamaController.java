@@ -135,7 +135,7 @@ public class OllamaController implements IAiService, IRAGService {
      */
     @RequestMapping(value = "file/upload", method = RequestMethod.POST, headers = "content-type=multipart/form-data")
     @Override
-    public Response<String> uploadFile(@RequestParam String ragTag, @RequestParam("file") List<MultipartFile> files) {
+    public Response<String> uploadFile(@RequestParam("ragTag") String ragTag, @RequestParam("file") List<MultipartFile> files) {
         log.info("上传知识库开始 {}", ragTag);
         for (MultipartFile file : files) {
             TikaDocumentReader documentReader = new TikaDocumentReader(file.getResource());
@@ -161,10 +161,12 @@ public class OllamaController implements IAiService, IRAGService {
     public Response<String> analyzeGitRepository(@RequestParam String repoUrl, @RequestParam String userName, @RequestParam String token) throws Exception {
         String localPath = "./git-repo";
         String repoProjectName = extractProjectName(repoUrl);
-        log.info("克隆路径：{}", new File(localPath).getAbsolutePath());
+
 
         // 1. 清理目录 - 同步
 //        FileUtils.deleteDirectory(new File(localPath));
+
+        log.info("克隆路径：{}", new File(localPath).getAbsolutePath());
 
         // 2. 克隆仓库 - 同步
         Git git = Git.cloneRepository()
