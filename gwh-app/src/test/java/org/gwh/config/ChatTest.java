@@ -3,7 +3,6 @@ package org.gwh.config;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.gwh.trigger.http.OllamaController;
-import org.gwh.trigger.http.service.Ollama;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.ai.chat.ChatResponse;
