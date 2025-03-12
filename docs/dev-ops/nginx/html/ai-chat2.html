@@ -352,11 +352,15 @@
 
                 const model = modelSelect.value;
                 const selectedRagTag = ragTagSelect.value;
-                let apiUrl = `http://localhost:8090/api/v1/ollama/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
                 
-                // 如果选择了RAG标签，添加到请求URL
-                if (selectedRagTag) {
-                    apiUrl += `&ragTag=${encodeURIComponent(selectedRagTag)}`;
+                // 根据是否选择了RAG标签来决定使用哪个接口
+                let apiUrl;
+                if (selectedRagTag !== "") {
+                    // 使用RAG接口
+                    apiUrl = `http://localhost:8090/api/v1/ollama/generate_stream_rag?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}&ragTag=${encodeURIComponent(selectedRagTag)}`;
+                } else {
+                    // 使用普通接口
+                    apiUrl = `http://localhost:8090/api/v1/ollama/generate_stream?model=${encodeURIComponent(model)}&message=${encodeURIComponent(message)}`;
                 }
 
                 currentEventSource = new EventSource(apiUrl);
@@ -436,16 +440,24 @@
             // Initial load
             loadChats();
 
-            // 修改loadRagTags函数
+            // 修改loadRagTags函数，确保始终有默认选项
             async function loadRagTags() {
                 try {
                     const response = await fetch('http://localhost:8090/api/v1/ollama/rag/tags');
                     const result = await response.json();
+                    
+                    // 始终添加默认选项
+                    ragTagSelect.innerHTML = '<option value="">Default (No Knowledge Base)</option>';
+                    
+                    // 如果有标签则添加到选项中
                     if (result.code === '0000' && result.data) {
                         const tags = result.data;
-                        ragTagSelect.innerHTML = tags.length === 0 ? 
-                            '<option value="">All Knowledge Base</option>' : 
-                            tags.map(tag => `<option value="${tag}">${tag}</option>`).join('');
+                        tags.forEach(tag => {
+                            const option = document.createElement('option');
+                            option.value = tag;
+                            option.textContent = tag;
+                            ragTagSelect.appendChild(option);
+                        });
                     }
                 } catch (error) {
                     console.error('Error loading RAG tags:', error);
