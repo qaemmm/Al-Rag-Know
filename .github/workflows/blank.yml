@@ -9,31 +9,10 @@ jobs:
   test-ollama-api:
     runs-on: self-hosted
     steps:
-      - name: Install PowerShell Core
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget apt-transport-https
-          wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
-          sudo dpkg -i packages-microsoft-prod.deb
-          sudo apt-get update
-          sudo apt-get install -y powershell
-
-      - name: Run PowerShell Script
-        shell: pwsh
-        run: |
-          Write-Host "Hello from PowerShell Core"
-          Get-ChildItem
-      - name: Fix Path Conversion
-        shell: pwsh
-        run: |
-          $tempPath = "D:\github\actions-runner\_work\_temp"
-          $correctPath = $tempPath -replace "\\", "/"
-          Write-Host "Corrected Path: $correctPath"
-
       - name: Test API connection
-        shell: pwsh
+        shell: bash
         run: |
-          response=$(curl -s -X POST http://localhost:11434/api/generate \
+          response=$(curl -s -X POST http://124.70.185.116:11434/api/generate \
             -H "Content-Type: application/json" \
             -d '{
                   "model": "deepseek-r1:1.5b",
