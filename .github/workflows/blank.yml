@@ -1,27 +1,49 @@
-name: Test API Connection
+name: Test Local OpenAI API via Self-Hosted Runner
 
-on: 
-  push:  # 当代码推送到 main 分支时触发
-    branches:
-      - main
-  workflow_dispatch:  # 允许手动触发
+on:
+  workflow_dispatch:  # 允许手动触发工作流
 
 jobs:
-  your_job:
-    runs-on: self-hosted  # 运行在自托管的 Windows Runner 上
-
+  test-local-api:
+    name: Test local API connectivity
+    runs-on: self-hosted  # 指定使用自托管 Runner
+    
     steps:
-      - name: Test API Connection
-        shell: pwsh  # 运行 PowerShell
+      - name: Check Runner Environment
         run: |
-          $body = @{
-            model = "deepseek-r1:1.5b"
-            prompt = "1+1"
-            stream = $false
-          } | ConvertTo-Json -Depth 10
+          echo "Runner is running on: $(uname -a)"
+          echo "Current directory: $(pwd)"
+          
+      - name: Send POST Request to Local API
+        id: post-request
+        run: |
+          # 使用 curl 发送 POST 请求并捕获响应状态码
+          response_code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "deepseek-r1:1.5b",
+              "prompt": "1+1",
+              "stream": false
+            }' \
+            http://localhost:11434/api/generate
+          )
+          
+          # 输出原始响应（调试用）
+          echo "Raw response:"
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"model": "deepseek-r1:1.5b","prompt": "1+1","stream": false}' \
+            http://localhost:11434/api/generate
+          
+          # 检查状态码
+          if [ "$response_code" -ne 200 ]; then
+            echo "❌ API request failed with status code: $response_code"
+            exit 1
+          else
+            echo "✅ API request succeeded (200 OK)"
+          fi
 
-          $headers = @{
-            "Content-Type" = "application/json"
-          }
-
-          Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method Post -Headers $headers -Body $body
+      - name: Show Success
+        if: success()
+        run: echo "All tests passed!"
