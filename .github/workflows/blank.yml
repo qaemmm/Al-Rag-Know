@@ -24,4 +24,4 @@ jobs:
             "Content-Type" = "application/json"
           }
 
-          Invoke-RestMethod -Uri "http://117.72.115.188:11434/api/generate" -Method Post -Headers $headers -Body $body
+          Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method Post -Headers $headers -Body $body
