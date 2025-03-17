@@ -9,6 +9,20 @@ jobs:
   test-ollama-api:
     runs-on: self-hosted
     steps:
+      - name: Install PowerShell Core
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https
+          wget -q https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Run PowerShell Script
+        shell: pwsh
+        run: |
+          Write-Host "Hello from PowerShell Core"
+          Get-ChildItem
       - name: Fix Path Conversion
         shell: pwsh
         run: |
