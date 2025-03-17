@@ -8,15 +8,20 @@ on:
 
 jobs:
   your_job:
-    runs-on: self-hosted  # 运行在自托管 Runner 上
+    runs-on: self-hosted  # 运行在自托管的 Windows Runner 上
 
     steps:
       - name: Test API Connection
+        shell: pwsh  # 运行 PowerShell
         run: |
-          curl http://117.72.115.188:11434/api/generate \
-            -H "Content-Type: application/json" \
-            -d '{
-                  "model": "deepseek-r1:1.5b",
-                  "prompt": "1+1",
-                  "stream": false
-                }'
+          $body = @{
+            model = "deepseek-r1:1.5b"
+            prompt = "1+1"
+            stream = $false
+          } | ConvertTo-Json -Depth 10
+
+          $headers = @{
+            "Content-Type" = "application/json"
+          }
+
+          Invoke-RestMethod -Uri "http://117.72.115.188:11434/api/generate" -Method Post -Headers $headers -Body $body
