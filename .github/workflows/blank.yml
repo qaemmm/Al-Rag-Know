@@ -10,14 +10,14 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Fix Path Conversion
-        shell: bash
+        shell: pwsh
         run: |
           $tempPath = "D:\github\actions-runner\_work\_temp"
           $correctPath = $tempPath -replace "\\", "/"
           Write-Host "Corrected Path: $correctPath"
 
       - name: Test API connection
-        shell: bash
+        shell: pwsh
         run: |
           response=$(curl -s -X POST http://localhost:11434/api/generate \
             -H "Content-Type: application/json" \
