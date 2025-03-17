@@ -1,5 +1,3 @@
-
-
 name: Test Ollama Integration
 
 on:
@@ -11,7 +9,14 @@ jobs:
   test-ollama-api:
     runs-on: self-hosted
     steps:
-      - name: Test API connection with Git Bash
+      - name: Fix Path Conversion
+        shell: bash
+        run: |
+          $tempPath = "D:\github\actions-runner\_work\_temp"
+          $correctPath = $tempPath -replace "\\", "/"
+          Write-Host "Corrected Path: $correctPath"
+
+      - name: Test API connection
         shell: bash
         run: |
           response=$(curl -s -X POST http://localhost:11434/api/generate \
