@@ -1,19 +1,41 @@
-name: Test Local API
+name: Test Ollama Integration
 
-on: [workflow_dispatch]  # 手动触发
+on:
+  workflow_dispatch:  # 允许手动触发
+  push:
+    branches: [ main ]
 
 jobs:
-  test-api:
-    runs-on: self-hosted  # 必须使用自托管 Runner
+  test-ollama-connection:
+    name: Test Ollama API
+    runs-on: self-hosted  # 使用自托管 Runner
+    
     steps:
-    - name: Test POST Request
+    - name: Verify Ollama service status
       run: |
-        # 发送请求并检查状态码是否为200
-        if ! curl -sS -X POST http://localhost:11434/api/generate \
-          -H 'Content-Type: application/json' \
-          -d '{"model":"deepseek-r1:1.5b","prompt":"1+1","stream":false}' \
-          -w "\nStatus Code: %{http_code}\n" \
-          --fail; then
-          echo "❌ 请求失败"
+        # 检查 Ollama 服务是否正在运行（Linux 系统示例）
+        if systemctl is-active --quiet ollama; then
+          echo "Ollama service is running"
+        else
+          echo "Ollama service is not running!"
+          exit 1
+        fi
+
+    - name: Test API connection
+      run: |
+        # 执行 API 测试请求
+        curl -v -X POST http://localhost:11434/api/generate \
+          -H "Content-Type: application/json" \
+          -d '{
+                "model": "deepseek-r1:1.5b",
+                "prompt": "1+1",
+                "stream": false
+              }' \
+          --connect-timeout 30 \
+          --max-time 60
+        
+        # 检查返回状态码
+        if [ $? -ne 0 ]; then
+          echo "API request failed!"
           exit 1
         fi
