@@ -1,49 +1,19 @@
-name: Test Local OpenAI API via Self-Hosted Runner
+name: Test Local API
 
-on:
-  workflow_dispatch:  # 允许手动触发工作流
+on: [workflow_dispatch]  # 手动触发
 
 jobs:
-  test-local-api:
-    name: Test local API connectivity
-    runs-on: self-hosted  # 指定使用自托管 Runner
-    
+  test-api:
+    runs-on: self-hosted  # 必须使用自托管 Runner
     steps:
-      - name: Check Runner Environment
-        run: |
-          echo "Runner is running on: $(uname -a)"
-          echo "Current directory: $(pwd)"
-          
-      - name: Send POST Request to Local API
-        id: post-request
-        run: |
-          # 使用 curl 发送 POST 请求并捕获响应状态码
-          response_code=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "deepseek-r1:1.5b",
-              "prompt": "1+1",
-              "stream": false
-            }' \
-            http://localhost:11434/api/generate
-          )
-          
-          # 输出原始响应（调试用）
-          echo "Raw response:"
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"model": "deepseek-r1:1.5b","prompt": "1+1","stream": false}' \
-            http://localhost:11434/api/generate
-          
-          # 检查状态码
-          if [ "$response_code" -ne 200 ]; then
-            echo "❌ API request failed with status code: $response_code"
-            exit 1
-          else
-            echo "✅ API request succeeded (200 OK)"
-          fi
-
-      - name: Show Success
-        if: success()
-        run: echo "All tests passed!"
+    - name: Test POST Request
+      run: |
+        # 发送请求并检查状态码是否为200
+        if ! curl -sS -X POST http://localhost:11434/api/generate \
+          -H 'Content-Type: application/json' \
+          -d '{"model":"deepseek-r1:1.5b","prompt":"1+1","stream":false}' \
+          -w "\nStatus Code: %{http_code}\n" \
+          --fail; then
+          echo "❌ 请求失败"
+          exit 1
+        fi
