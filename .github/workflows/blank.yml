@@ -11,31 +11,22 @@ jobs:
     runs-on: self-hosted  # 使用自托管 Runner
     
     steps:
-    - name: Verify Ollama service status
-      run: |
-        # 检查 Ollama 服务是否正在运行（Linux 系统示例）
-        if systemctl is-active --quiet ollama; then
-          echo "Ollama service is running"
-        else
-          echo "Ollama service is not running!"
-          exit 1
-        fi
-
     - name: Test API connection
+      shell: pwsh  # 强制使用 PowerShell Core
       run: |
-        # 执行 API 测试请求
-        curl -v -X POST http://localhost:11434/api/generate \
-          -H "Content-Type: application/json" \
+        $response = curl -s -X POST http://localhost:11434/api/generate `
+          -H "Content-Type: application/json" `
           -d '{
                 "model": "deepseek-r1:1.5b",
                 "prompt": "1+1",
                 "stream": false
-              }' \
-          --connect-timeout 30 \
+              }' `
+          --connect-timeout 30 `
           --max-time 60
         
-        # 检查返回状态码
-        if [ $? -ne 0 ]; then
-          echo "API request failed!"
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "API request failed with exit code $LASTEXITCODE"
           exit 1
-        fi
+        }
+        
+        Write-Output "API Response: $response"
