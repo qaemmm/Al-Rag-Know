@@ -1,32 +1,27 @@
 name: Test Ollama Integration
 
 on:
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
   push:
     branches: [ main ]
 
 jobs:
-  test-ollama-connection:
-    name: Test Ollama API
-    runs-on: self-hosted  # 使用自托管 Runner
-    
+  test-ollama-api:
+    runs-on: self-hosted
     steps:
-    - name: Test API connection
-      shell: pwsh  # 强制使用 PowerShell Core
-      run: |
-        $response = curl -s -X POST http://localhost:11434/api/generate `
-          -H "Content-Type: application/json" `
-          -d '{
-                "model": "deepseek-r1:1.5b",
-                "prompt": "1+1",
-                "stream": false
-              }' `
-          --connect-timeout 30 `
-          --max-time 60
-        
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "API request failed with exit code $LASTEXITCODE"
-          exit 1
-        }
-        
-        Write-Output "API Response: $response"
+      - name: Test API connection
+        shell: bash
+        run: |
+          response=$(curl -s -X POST http://localhost:11434/api/generate \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "model": "deepseek-r1:1.5b",
+                  "prompt": "1+1",
+                  "stream": false
+                }' \
+            --connect-timeout 30 \
+            --max-time 60)
+          
+          if [ $? -ne 0 ]; then
+            echo "API request failed with exit code $?"
+            exit
