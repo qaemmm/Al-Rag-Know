@@ -1,3 +1,5 @@
+
+
 name: Test Ollama Integration
 
 on:
@@ -9,7 +11,7 @@ jobs:
   test-ollama-api:
     runs-on: self-hosted
     steps:
-      - name: Test API connection
+      - name: Test API connection with Git Bash
         shell: bash
         run: |
           response=$(curl -s -X POST http://localhost:11434/api/generate \
@@ -24,4 +26,7 @@ jobs:
           
           if [ $? -ne 0 ]; then
             echo "API request failed with exit code $?"
-            exit
+            exit 1
+          fi
+          
+          echo "API Response: $response"
