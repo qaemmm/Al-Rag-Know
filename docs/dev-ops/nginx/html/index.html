@@ -1,0 +1,71 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-4 flex justify-between items-center">
+                <button id="new-chat-btn" class="flex-1 bg-blue-500 text-white rounded-lg px-4 py-2 text-sm hover:bg-blue-600 transition-colors mr-2">
+                    New Chat
+                </button>
+            </div>
+            <div id="chat-list" class="flex-1 overflow-y-auto p-2 space-y-2">
+                <!-- Chat items will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Header -->
+            <div id="chat-header" class="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <h2 id="current-chat-title" class="text-lg font-semibold">New Chat</h2>
+                <div class="flex items-center space-x-4">
+                    <select id="rag-tag-select" class="p-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">All Knowledge Base</option>
+                    </select>
+                    <button onclick="window.location.href='upload.html'" class="px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors">
+                        Knowledge Base
+                    </button>
+                </div>
+                <div id="chat-actions" class="space-x-2 hidden">
+                    <button class="rename-chat-btn text-sm text-gray-600 hover:text-gray-900">Rename</button>
+                    <button class="delete-chat-btn text-sm text-red-600 hover:text-red-900">Delete</button>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Messages will be inserted here -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <div class="flex gap-2 items-start">
+                    <div class="flex-1">
+                        <textarea id="user-input" class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none text-sm"
+                               placeholder="Type your message here..." rows="2"></textarea>
+                        <div class="flex gap-2 mt-2">
+                            <select id="model-select" class="flex-1 p-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                <option value="deepseek-r1:1.5b">DeepSeek R1 1.5B</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="send-button" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/chat.js"></script>
+</body>
+</html>

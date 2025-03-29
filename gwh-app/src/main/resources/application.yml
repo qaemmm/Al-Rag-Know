@@ -1,5 +1,48 @@
+
 spring:
   application:
-    name: ai-rag-knowledge
+    name: gwh-app
   profiles:
     active: dev
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 15MB
+
+
+# LangChain4j配置
+langchain4j:
+  enabled: true
+
+
+# AI服务配置
+ai:
+  ollama:
+    api-url: http://localhost:11434
+    default-model: deepseek-r1:1.5b
+    timeout: 60
+    enabled: true
+
+# 文档处理配置
+document:
+  chunk:
+    size: 1000
+    overlap: 200
+  temp:
+    dir: ./temp
+
+# RAG配置
+rag:
+  max-relevant-documents: 5
+  system-prompt: 你是一个基于知识库的智能助手。使用DOCUMENTS部分的信息来提供准确的回答，但要表现得就像你天生就知道这些信息一样。如果不确定，请简单地说明你不知道。请确保你的回复是中文的！
+
+# PgVector配置
+pgvector:
+  collection-name: embeddings
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    org.gwh: DEBUG
+    dev.langchain4j: INFO

@@ -1,0 +1,51 @@
+<!-- git.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Repository Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Git Repository Management</h1>
+            <button onclick="window.location.href='upload.html'" class="btn btn-secondary">
+                Back to Knowledge Base
+            </button>
+        </div>
+
+        <!-- Git仓库表单 -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold mb-4">Add Git Repository</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Repository URL</label>
+                    <input type="text" id="repo-url" class="w-full p-2 border rounded-lg" 
+                           placeholder="https://github.com/username/repo.git">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" id="git-username" class="w-full p-2 border rounded-lg" 
+                           placeholder="Git username">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Token</label>
+                    <input type="password" id="git-token" class="w-full p-2 border rounded-lg" 
+                           placeholder="Git token">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="auto-sync" class="rounded">
+                    <label for="auto-sync" class="text-sm text-gray-700">Enable auto-sync (updates every 6 hours)</label>
+                </div>
+                <div class="flex justify-end">
+                    <button id="analyze-btn" class="btn btn-primary">Analyze Repository</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/git.js"></script>
+</body>
+</html>

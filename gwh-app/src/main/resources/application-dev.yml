@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: postgres
     password: postgres
-    url: jdbc:postgresql://8.138.9.139:15432/ai-rag-knowledge
+    url: jdbc:postgresql://124.70.185.116:15432/ai-rag-knowledge
     type: com.zaxxer.hikari.HikariDataSource
     # hikari连接池配置
     hikari:
@@ -28,24 +28,34 @@ spring:
       connection-test-query: SELECT 1
   ai:
     ollama:
-      base-url: http://8.138.9.139:11434
+      base-url: http://localhost:11434
       embedding:
         options:
           num-batch: 512
         model: nomic-embed-text
+#      chat:
+#        enabled: false
     openai:
       base-url: https://key.wenwen-ai.com/
       api-key: sk-6V2exWFBSa2lmuZ7C0D773D1BaEd4fB7A1B6A0A265D550C6
       embedding-model: text-embedding-ada-002
+    deepseek:
+      enabled: true
+      base-url: https://api.deepseek.com/v1
+      api-key: sk-329ec42fccd1436e8cbd1814c9cf031a
+      embedding-model: deepseek-embed-v1
     rag:
       embed: nomic-embed-text #nomic-embed-text、text-embedding-ada-002
-
+    ai:
+      transformers:
+        enabled: false
 
 # Redis
 redis:
   sdk:
     config:
-      host: 8.138.9.139
+#      host: 124.70.185.116
+      host: 172.24.58.32
       port: 16379
       pool-size: 10
       min-idle-size: 5
@@ -55,8 +65,25 @@ redis:
       retry-interval: 1000
       ping-interval: 60000
       keep-alive: true
+      password: gwh842
 
 logging:
   level:
     root: info
   config: classpath:logback-spring.xml
+#ai:
+#  chatglm:
+#    api-key: f93b8a992cd743c0a6d52949156a4372.wVJRhfe6KmOSbLzL
+#    base-url: https://open.bigmodel.cn
+#    embedding-model:  chatglm-embedding-v2
+#    enabled: true
+#  deepseek:
+#    api-key: sk-329ec42fccd1436e8cbd1814c9cf031a
+#    base-url: https://api.deepseek.com/v1
+#    embedding-model: deepseek-embed-v1
+#    enabled: true
+#  ollama:
+#    embedding-model: text-embedding-ada-002
+#    base-url:  http://localhost:11434
+#    enabled: true
+
