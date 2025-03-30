@@ -58,29 +58,94 @@
 
     <!-- 上传文档对话框 -->
     <el-dialog title="上传文档" v-model="uploadDialogVisible" width="500px">
-      <div class="upload-container">
-        <el-upload
-          class="upload-area"
-          drag
-          :action="uploadUrl"
-          :headers="uploadHeaders"
-          :data="uploadData"
-          :before-upload="beforeUpload"
-          :on-success="handleUploadSuccess"
-          :on-error="handleUploadError"
-          :on-progress="handleUploadProgress"
-          :file-list="fileList"
-          multiple
-        >
-          <el-icon class="el-icon--upload"><i class="el-icon-upload"></i></el-icon>
-          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-          <template #tip>
-            <div class="el-upload__tip">
-              支持格式: {{ currentKnowledgeBase?.fileTypes?.join(', ') || '所有格式' }}
-            </div>
-          </template>
-        </el-upload>
-      </div>
+      <el-tabs v-model="activeUploadTab">
+        <el-tab-pane label="文件上传" name="file">
+          <div class="upload-container">
+            <el-upload
+              class="upload-area"
+              drag
+              :action="uploadUrl"
+              :headers="uploadHeaders"
+              :data="uploadData"
+              :before-upload="beforeUpload"
+              :on-success="handleUploadSuccess"
+              :on-error="handleUploadError"
+              :on-progress="handleUploadProgress"
+              :file-list="fileList"
+              multiple
+            >
+              <el-icon class="el-icon--upload"><i class="el-icon-upload"></i></el-icon>
+              <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+              <template #tip>
+                <div class="el-upload__tip">
+                  支持格式: {{ currentKnowledgeBase?.fileTypes?.join(', ') || '所有格式' }}
+                </div>
+              </template>
+            </el-upload>
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="代码库上传" name="git">
+          <div class="git-upload-container">
+            <el-form :model="gitForm" label-width="100px">
+              <el-form-item label="仓库地址" required>
+                <el-input v-model="gitForm.repoUrl" placeholder="例如: https://github.com/username/repository.git"></el-input>
+              </el-form-item>
+              <el-form-item label="用户名" required>
+                <el-input v-model="gitForm.userName" placeholder="Git用户名"></el-input>
+              </el-form-item>
+              <el-form-item label="访问令牌" required>
+                <el-input v-model="gitForm.token" type="password" placeholder="Git访问令牌" show-password></el-input>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="handleGitUpload" :loading="gitUploading">上传代码库</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="GitHub直接上传" name="github">
+          <div class="git-upload-container">
+            <el-form :model="githubForm" label-width="100px">
+              <el-form-item label="仓库拥有者" required>
+                <el-input v-model="githubForm.repoOwner" placeholder="例如: microsoft"></el-input>
+              </el-form-item>
+              <el-form-item label="仓库名称" required>
+                <el-input v-model="githubForm.repoName" placeholder="例如: vscode"></el-input>
+              </el-form-item>
+              <el-form-item label="访问令牌" required>
+                <el-input v-model="githubForm.token" type="password" placeholder="GitHub访问令牌" show-password></el-input>
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" @click="handleGithubUpload" :loading="githubUploading">上传GitHub仓库</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="本地代码上传" name="localGit">
+          <div class="upload-container">
+            <el-upload
+              class="upload-area"
+              drag
+              action="/api/v1/ai/ollama/upload_git_zip"
+              :headers="uploadHeaders"
+              :data="{knowledgeBaseId: currentKnowledgeBase?.id || ''}"
+              :before-upload="beforeUploadZip"
+              :on-success="handleZipUploadSuccess"
+              :on-error="handleZipUploadError"
+              :file-list="zipFileList"
+              :multiple="false"
+              accept=".zip"
+            >
+              <el-icon class="el-icon--upload"><i class="el-icon-upload"></i></el-icon>
+              <div class="el-upload__text">将ZIP格式的代码库拖到此处，或<em>点击上传</em></div>
+              <template #tip>
+                <div class="el-upload__tip">
+                  请将代码库打包成ZIP格式后上传，仅支持ZIP文件
+                </div>
+              </template>
+            </el-upload>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
     </el-dialog>
   </div>
 </template>
@@ -91,7 +156,9 @@ import {
   createKnowledge, 
   updateKnowledge, 
   deleteKnowledge, 
-  uploadFile 
+  uploadFile,
+  analyzeGitRepository,
+  analyzeGithubRepository
 } from '@/api/knowledge';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -127,7 +194,21 @@ export default {
       uploadData: {
         knowledgeBaseId: ''
       },
-      fileList: []
+      fileList: [],
+      activeUploadTab: 'file',
+      gitForm: {
+        repoUrl: '',
+        userName: '',
+        token: ''
+      },
+      githubForm: {
+        repoOwner: '',
+        repoName: '',
+        token: ''
+      },
+      gitUploading: false,
+      githubUploading: false,
+      zipFileList: []
     };
   },
   created() {
@@ -259,6 +340,125 @@ export default {
       if (!dateStr) return '未知时间';
       const date = new Date(dateStr);
       return date.toLocaleString();
+    },
+    
+    // 处理代码库上传
+    async handleGitUpload() {
+      // 验证表单
+      if (!this.gitForm.repoUrl.trim()) {
+        ElMessage.warning('请输入代码仓库地址');
+        return;
+      }
+      if (!this.gitForm.userName.trim()) {
+        ElMessage.warning('请输入Git用户名');
+        return;
+      }
+      if (!this.gitForm.token.trim()) {
+        ElMessage.warning('请输入访问令牌');
+        return;
+      }
+
+      this.gitUploading = true;
+      try {
+        // 调用API上传代码库
+        const response = await analyzeGitRepository({
+          repoUrl: this.gitForm.repoUrl,
+          userName: this.gitForm.userName,
+          token: this.gitForm.token,
+          knowledgeBaseId: this.currentKnowledgeBase.id
+        });
+        
+        if (response && response.code === 200) {
+          ElMessage.success('代码库上传成功');
+          this.uploadDialogVisible = false;
+          // 清空表单
+          this.gitForm = {
+            repoUrl: '',
+            userName: '',
+            token: ''
+          };
+        } else {
+          ElMessage.error('代码库上传失败: ' + (response.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('代码库上传失败', error);
+        ElMessage.error('代码库上传失败: ' + (error.message || '未知错误'));
+      } finally {
+        this.gitUploading = false;
+      }
+    },
+    
+    // 处理ZIP文件上传
+    beforeUploadZip(file) {
+      if (!this.currentKnowledgeBase) {
+        ElMessage.error('请先选择知识库');
+        return false;
+      }
+      
+      const extension = file.name.split('.').pop().toLowerCase();
+      if (extension !== 'zip') {
+        ElMessage.error('仅支持ZIP格式文件');
+        return false;
+      }
+      
+      return true;
+    },
+    
+    // ZIP文件上传成功处理
+    handleZipUploadSuccess(response, file) {
+      ElMessage.success(`ZIP文件 ${file.name} 上传成功`);
+    },
+    
+    // ZIP文件上传错误处理
+    handleZipUploadError(err, file) {
+      console.error('上传ZIP文件失败', err, file);
+      ElMessage.error(`ZIP文件 ${file.name} 上传失败`);
+    },
+    
+    // 处理GitHub仓库上传
+    async handleGithubUpload() {
+      // 验证表单
+      if (!this.githubForm.repoOwner.trim()) {
+        ElMessage.warning('请输入仓库拥有者');
+        return;
+      }
+      if (!this.githubForm.repoName.trim()) {
+        ElMessage.warning('请输入仓库名称');
+        return;
+      }
+      if (!this.githubForm.token.trim()) {
+        ElMessage.warning('请输入GitHub访问令牌');
+        return;
+      }
+
+      this.githubUploading = true;
+      try {
+        // 调用API上传GitHub仓库
+        const response = await analyzeGithubRepository({
+          repoOwner: this.githubForm.repoOwner,
+          repoName: this.githubForm.repoName,
+          token: this.githubForm.token,
+          knowledgeBaseId: this.currentKnowledgeBase.id
+        });
+        
+        if (response && response.code === 200) {
+          ElMessage.success('GitHub仓库上传成功');
+          this.uploadDialogVisible = false;
+          // 清空表单
+          this.githubForm = {
+            repoOwner: '',
+            repoName: '',
+            token: ''
+          };
+        } else {
+          ElMessage.error('GitHub仓库上传失败: ' + (response.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('GitHub仓库上传失败', error);
+        ElMessage.error('GitHub仓库上传失败: ' + (error.message || '未知错误'));
+      } finally {
+        this.githubUploading = false;
+      }
     }
   }
 };
@@ -334,5 +534,9 @@ export default {
 
 .upload-area {
   width: 100%;
+}
+
+.git-upload-container {
+  padding: 20px;
 }
 </style> 

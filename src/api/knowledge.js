@@ -112,7 +112,28 @@ export function chat(data) {
 // 分析Git仓库
 export function analyzeGitRepository(data) {
   return request({
-    url: '/api/v1/ollama/analyze_git_repository',
+    url: '/api/v1/ai/ollama/analyze_git_repository',
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    transformRequest: [
+      function(data) {
+        let ret = ''
+        for (let it in data) {
+          ret += encodeURIComponent(it) + '=' + encodeURIComponent(data[it]) + '&'
+        }
+        return ret.slice(0, -1)
+      }
+    ]
+  })
+}
+
+// 分析GitHub仓库
+export function analyzeGithubRepository(data) {
+  return request({
+    url: '/api/v1/ai/ollama/analyze_github_repository',
     method: 'post',
     data,
     headers: {

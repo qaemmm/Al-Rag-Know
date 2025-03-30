@@ -10,8 +10,8 @@
     <packaging>pom</packaging>
     <modules>
         <module>gwh-app</module>
-        <module>gwh-trigger</module>
         <module>gwh-api</module>
+        <module>gwh-codereview</module>
     </modules>
 
     <properties>

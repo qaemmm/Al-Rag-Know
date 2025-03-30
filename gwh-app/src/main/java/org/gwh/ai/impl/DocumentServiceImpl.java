@@ -183,4 +183,53 @@ public class DocumentServiceImpl implements DocumentService {
                 .map(doc -> TextSegment.from(doc.text(), doc.metadata()))
                 .collect(Collectors.toList());
     }
+
+    /**
+     * 处理结构化文档
+     */
+    @Override
+    public Map<String, Object> processStructuredDocument(Document document, String knowledgeBase) {
+        log.info("处理结构化文档，知识库: {}, 元数据: {}", knowledgeBase, document.metadata());
+        
+        try {
+            // 确保文档有正确的知识库元数据
+            Metadata docMetadata = document.metadata();
+            Map<String, String> metadataMap = new HashMap<>();
+            
+            // 复制原有元数据
+            for (Map.Entry<String, String> entry : docMetadata.asMap().entrySet()) {
+                metadataMap.put(entry.getKey(), entry.getValue());
+            }
+            
+            // 添加或更新知识库元数据
+            metadataMap.put("knowledge_base", knowledgeBase);
+            
+            // 使用更新后的元数据重新创建文档
+            document = Document.from(document.text(), Metadata.from(metadataMap));
+            
+            // 分割文档
+            DocumentSplitter splitter = DocumentSplitters.recursive(chunkSize, chunkOverlap);
+            List<TextSegment> segments = splitter.split(document);
+            
+            log.info("文档分割成 {} 个片段", segments.size());
+            
+            // 向量化和存储文档片段
+            for (TextSegment segment : segments) {
+                embeddingStore.add(embeddingModel.embed(segment.text()).content(), segment);
+            }
+            
+            // 返回处理结果
+            Map<String, Object> result = new HashMap<>();
+            result.put("chunks", segments.size());
+            result.put("knowledgeBase", knowledgeBase);
+            if (metadataMap.containsKey("file")) {
+                result.put("file", metadataMap.get("file"));
+            }
+            
+            return result;
+        } catch (Exception e) {
+            log.error("处理结构化文档失败", e);
+            throw new RuntimeException("处理结构化文档失败: " + e.getMessage());
+        }
+    }
 }

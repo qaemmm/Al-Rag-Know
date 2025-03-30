@@ -25,6 +25,16 @@ public interface DocumentService {
     Map<String, Object> processDocument(MultipartFile file, String knowledgeBase) throws IOException;
     
     /**
+     * 处理结构化文档
+     * 直接存储已解析的文档到向量库
+     *
+     * @param document 已解析的文档
+     * @param knowledgeBase 知识库名称
+     * @return 处理结果信息
+     */
+    Map<String, Object> processStructuredDocument(Document document, String knowledgeBase);
+    
+    /**
      * 检索相关文档
      * 根据查询文本检索最相关的文档片段
      *
